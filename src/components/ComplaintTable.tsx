@@ -4,6 +4,7 @@ interface Props {
   complaints: Complaint[];
   onEdit: (complaint: Complaint) => void;
   onDelete: (id: number) => void;
+  onToggleComplete: (id: number) => void;
 }
 
 function getStatusColor(status: string): string {
@@ -24,7 +25,7 @@ function isOverdue(deadline: string): boolean {
   return new Date(deadline) < new Date();
 }
 
-export default function ComplaintTable({ complaints, onEdit, onDelete }: Props) {
+export default function ComplaintTable({ complaints, onEdit, onDelete, onToggleComplete }: Props) {
   if (complaints.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -90,11 +91,19 @@ export default function ComplaintTable({ complaints, onEdit, onDelete }: Props) 
                   </span>
                 </td>
                 <td className="px-3 py-3 text-center">
-                  {c.isCompleted ? (
-                    <span className="text-green-600 text-lg" title="Завершено">✓</span>
-                  ) : (
-                    <span className="text-gray-300 text-lg" title="Не завершено">○</span>
-                  )}
+                  <button
+                    onClick={() => onToggleComplete(c.id)}
+                    title={c.isCompleted ? 'Завершено — нажмите, чтобы снять' : 'Не завершено — нажмите, чтобы завершить'}
+                    className={`w-7 h-7 rounded-md border-2 flex items-center justify-center transition-all hover:scale-110 ${
+                      c.isCompleted
+                        ? 'bg-green-500 border-green-600 text-white shadow-sm'
+                        : 'bg-white border-gray-300 hover:border-green-400 text-transparent'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
                 </td>
                 <td className="px-3 py-3 text-center">
                   <div className="flex items-center justify-center gap-1">

@@ -177,6 +177,14 @@ function App() {
     }
   };
 
+  const handleToggleComplete = (id: number) => {
+    const newComplaints = complaints.map(c =>
+      c.id === id ? { ...c, isCompleted: !c.isCompleted } : c
+    );
+    setComplaints(newComplaints);
+    if (fileHandle) scheduleSave(newComplaints);
+  };
+
   const handleExport = () => {
     exportAsFile(complaints);
     showNotification('success', 'Файл экспортирован');
@@ -416,6 +424,7 @@ function App() {
           complaints={filteredComplaints}
           onEdit={(c: Complaint) => setEditingComplaint(c)}
           onDelete={handleDelete}
+          onToggleComplete={handleToggleComplete}
         />
       </div>
 
