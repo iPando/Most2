@@ -1,47 +1,15 @@
+// Импортируем данные из JSON-файлов
+// Для редактирования списков откройте соответствующие файлы в папке src/data/
+
+import districtsData from './districts.json';
+import departmentsData from './departments.json';
+import statusesData from './statuses.json';
+
 // Список районов
-export const DISTRICTS = [
-  'Центральный',
-  'Северный',
-  'Южный',
-  'Западный',
-  'Восточный',
-  'Юго-Западный',
-  'Северо-Западный',
-  'Юго-Восточный',
-  'Северо-Восточный',
-];
+export const DISTRICTS: string[] = districtsData;
 
 // Отделы и их сотрудники
-export const DEPARTMENTS: Record<string, string[]> = {
-  'Отдел по работе с населением': [
-    'Иванов А.А.',
-    'Петрова М.И.',
-    'Сидоров В.К.',
-  ],
-  'Технический отдел': [
-    'Козлов Д.Н.',
-    'Новикова Е.С.',
-    'Морозов П.Р.',
-  ],
-  'Отдел контроля качества': [
-    'Волкова О.В.',
-    'Соколов И.Д.',
-    'Лебедева Н.А.',
-  ],
-  'Юридический отдел': [
-    'Кузнецов С.М.',
-    'Попова Т.Г.',
-    'Васильев Р.Л.',
-  ],
-};
+export const DEPARTMENTS: Record<string, string[]> = departmentsData;
 
 // Статусы жалоб
-export const COMPLAINT_STATUSES = [
-  'Новая',
-  'В работе',
-  'Ожидает ответа',
-  'На рассмотрении',
-  'Решена',
-  'Отклонена',
-  'Закрыта',
-];
+export const COMPLAINT_STATUSES: string[] = statusesData;
