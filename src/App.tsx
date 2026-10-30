@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Complaint, ComplaintFormData } from './types';
 import { COMPLAINT_STATUSES } from './data/constants';
 import ComplaintForm from './components/ComplaintForm';
 import ComplaintTable from './components/ComplaintTable';
 import InfoPanel from './components/InfoPanel';
+import DeadlineAlertsModal from './components/DeadlineAlertsModal';
+import { getDeadlineAlerts, DeadlineAlert } from './utils/workdays';
 import {
   isFileSystemAccessSupported,
   pickDataFile,
@@ -18,6 +20,9 @@ import {
 
 type ConnectionStatus = 'checking' | 'connected' | 'disconnected' | 'not_supported';
 
+// Интервал проверки сроков (30 минут)
+const DEADLINE_CHECK_INTERVAL = 30 * 60 * 1000;
+
 function App() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -25,6 +30,9 @@ function App() {
   const [showInfo, setShowInfo] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [searchText, setSearchText] = useState('');
+  const [hideCompleted, setHideCompleted] = useState<boolean>(() => {
+    return localStorage.getItem('hide_completed') === 'true';
+  });
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('checking');
   const [fileName, setFileName] = useState<string>('');
@@ -32,13 +40,18 @@ function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const complaintsRef = useRef<Complaint[]>([]);
+  // Оповещения о сроках
+  const [showDeadlineAlerts, setShowDeadlineAlerts] = useState(false);
+  const [deadlineAlerts, setDeadlineAlerts] = useState<DeadlineAlert[]>([]);
+  const [alertsDismissed, setAlertsDismissed] = useState(false);
 
-  // Обновляем ref при изменении complaints
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deadlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Сохраняем настройку фильтра
   useEffect(() => {
-    complaintsRef.current = complaints;
-  }, [complaints]);
+    localStorage.setItem('hide_completed', String(hideCompleted));
+  }, [hideCompleted]);
 
   const showNotification = useCallback((type: 'success' | 'error', text: string) => {
     setNotification({ type, text });
@@ -59,7 +72,7 @@ function App() {
     }
   }, [showNotification]);
 
-  // Сохранение данных в файл (с дебаунсом)
+  // Сохранение данных в файл
   const saveData = useCallback(async (data: Complaint[]) => {
     if (!fileHandle) return;
     setIsSaving(true);
@@ -84,19 +97,17 @@ function App() {
     }, 500);
   }, [saveData]);
 
-  // Инициализация — пробуем восстановить подключение к файлу
+  // Инициализация
   useEffect(() => {
     const init = async () => {
       if (!isFileSystemAccessSupported()) {
         setConnectionStatus('not_supported');
-        // Загружаем из localStorage как fallback
         const saved = localStorage.getItem('complaints_registry');
         if (saved) {
           try { setComplaints(JSON.parse(saved)); } catch { /* ignore */ }
         }
         return;
       }
-
       const handle = await getSavedHandle();
       if (handle) {
         setFileHandle(handle);
@@ -108,12 +119,33 @@ function App() {
     init();
   }, [loadData]);
 
-  // Fallback — сохраняем в localStorage если нет файлового хранилища
+  // Fallback — localStorage
   useEffect(() => {
     if (connectionStatus === 'not_supported') {
       localStorage.setItem('complaints_registry', JSON.stringify(complaints));
     }
   }, [complaints, connectionStatus]);
+
+  // Проверка сроков
+  const checkDeadlines = useCallback(() => {
+    const alerts = getDeadlineAlerts(complaints);
+    setDeadlineAlerts(alerts);
+    if (alerts.length > 0 && !alertsDismissed) {
+      setShowDeadlineAlerts(true);
+    }
+  }, [complaints, alertsDismissed]);
+
+  // Запуск проверки при загрузке и каждые 30 минут
+  useEffect(() => {
+    if (complaints.length > 0) {
+      checkDeadlines();
+      if (deadlineTimerRef.current) clearInterval(deadlineTimerRef.current);
+      deadlineTimerRef.current = setInterval(checkDeadlines, DEADLINE_CHECK_INTERVAL);
+    }
+    return () => {
+      if (deadlineTimerRef.current) clearInterval(deadlineTimerRef.current);
+    };
+  }, [complaints, checkDeadlines]);
 
   // Подключение к файлу данных
   const handleConnectFile = async () => {
@@ -125,7 +157,6 @@ function App() {
     }
   };
 
-  // Создание нового файла данных
   const handleCreateFile = async () => {
     const handle = await createDataFile();
     if (handle) {
@@ -138,7 +169,6 @@ function App() {
     }
   };
 
-  // Отключение файла
   const handleDisconnect = async () => {
     await clearSavedHandle();
     setFileHandle(null);
@@ -201,24 +231,47 @@ function App() {
     }
   };
 
-  // Повторная попытка подключения
   const handleReconnect = async () => {
     if (fileHandle) {
       await loadData(fileHandle);
     }
   };
 
-  const filteredComplaints = complaints.filter(c => {
-    const matchStatus = !filterStatus || c.status === filterStatus;
-    const matchSearch = !searchText ||
-      c.complaintNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      c.complaintText.toLowerCase().includes(searchText.toLowerCase()) ||
-      c.object.toLowerCase().includes(searchText.toLowerCase()) ||
-      c.responsible.toLowerCase().includes(searchText.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  // Переход к обращению из оповещения
+  const handleGoToComplaint = (id: number) => {
+    setShowDeadlineAlerts(false);
+    setHideCompleted(false);
+    setFilterStatus('');
+    setSearchText('');
+    const complaint = complaints.find(c => c.id === id);
+    if (complaint) {
+      setEditingComplaint(complaint);
+    }
+  };
+
+  const handleCloseAlerts = () => {
+    setShowDeadlineAlerts(false);
+    setAlertsDismissed(true);
+  };
+
+  // Фильтрация
+  const filteredComplaints = useMemo(() => {
+    return complaints.filter(c => {
+      if (hideCompleted && c.isCompleted) return false;
+      const matchStatus = !filterStatus || c.status === filterStatus;
+      const matchSearch = !searchText ||
+        c.complaintNumber.toLowerCase().includes(searchText.toLowerCase()) ||
+        c.complaintText.toLowerCase().includes(searchText.toLowerCase()) ||
+        c.object.toLowerCase().includes(searchText.toLowerCase()) ||
+        c.responsible.toLowerCase().includes(searchText.toLowerCase());
+      return matchStatus && matchSearch;
+    });
+  }, [complaints, hideCompleted, filterStatus, searchText]);
 
   const needsFileConnection = connectionStatus === 'disconnected' && isFileSystemAccessSupported();
+  const hasAlerts = deadlineAlerts.length > 0;
+  const overdueCount = deadlineAlerts.filter(a => a.isOverdue).length;
+  const urgentCount = deadlineAlerts.filter(a => !a.isOverdue).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -234,7 +287,7 @@ function App() {
       {/* Header */}
       <header className="bg-blue-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-lg">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,15 +299,36 @@ function App() {
                 <p className="text-blue-200 text-sm">Система учёта жалоб и обращений</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Deadline alerts button */}
+              {hasAlerts && (
+                <button
+                  onClick={() => setShowDeadlineAlerts(true)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 animate-pulse-slow ${
+                    overdueCount > 0
+                      ? 'bg-red-500 hover:bg-red-600 text-white'
+                      : 'bg-amber-500 hover:bg-amber-600 text-white'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {overdueCount > 0 && <span>Просрочено: {overdueCount}</span>}
+                  {urgentCount > 0 && <span>Скоро: {urgentCount}</span>}
+                </button>
+              )}
+
               {/* Connection status */}
               <div className="flex items-center gap-2 text-sm">
                 {connectionStatus === 'connected' && (
                   <div className="flex items-center gap-2 bg-green-700/50 px-3 py-1.5 rounded-lg">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <span className="text-green-100">{fileName}</span>
-                    {lastSaved && <span className="text-green-300 text-xs">сохранено: {lastSaved}</span>}
-                    {isSaving && <span className="text-yellow-300 text-xs">сохранение...</span>}
+                    <span className={`w-2 h-2 rounded-full ${isSaving ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></span>
+                    <span className="text-green-100 truncate max-w-[150px]">{fileName}</span>
+                    {isSaving ? (
+                      <span className="text-yellow-300 text-xs">💾 сохранение...</span>
+                    ) : lastSaved ? (
+                      <span className="text-green-300 text-xs">✓ {lastSaved}</span>
+                    ) : null}
                   </div>
                 )}
                 {connectionStatus === 'not_supported' && (
@@ -326,7 +400,7 @@ function App() {
                   Ваш браузер не поддерживает прямой доступ к файлам. Данные сохраняются в браузере.
                   Используйте кнопки «Экспорт» / «Импорт» для обмена данными через сетевой диск.
                   <br />
-                  <strong>Рекомендация:</strong> используйте браузер Google Chrome или Microsoft Edge для полной функциональности.
+                  <strong>Рекомендация:</strong> используйте Google Chrome или Microsoft Edge для полной функциональности.
                 </p>
               </div>
             </div>
@@ -375,6 +449,17 @@ function App() {
               ))}
             </select>
 
+            {/* Скрыть завершённые */}
+            <label className="flex items-center gap-2 cursor-pointer select-none bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+              <input
+                type="checkbox"
+                checked={hideCompleted}
+                onChange={(e) => setHideCompleted(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700 whitespace-nowrap">Скрыть завершённые</span>
+            </label>
+
             <div className="flex gap-2">
               <button
                 onClick={handleExport}
@@ -411,11 +496,16 @@ function App() {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
+          <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 flex-wrap">
             <span>Всего: <strong className="text-gray-800">{complaints.length}</strong></span>
             <span>Показано: <strong className="text-gray-800">{filteredComplaints.length}</strong></span>
             <span>Завершено: <strong className="text-green-600">{complaints.filter(c => c.isCompleted).length}</strong></span>
             <span>В работе: <strong className="text-blue-600">{complaints.filter(c => !c.isCompleted).length}</strong></span>
+            {hideCompleted && (
+              <span className="text-gray-400">
+                (скрыто: {complaints.filter(c => c.isCompleted).length})
+              </span>
+            )}
           </div>
         </div>
 
@@ -450,6 +540,15 @@ function App() {
       {/* Info Panel */}
       {showInfo && (
         <InfoPanel onClose={() => setShowInfo(false)} />
+      )}
+
+      {/* Deadline Alerts Modal */}
+      {showDeadlineAlerts && (
+        <DeadlineAlertsModal
+          alerts={deadlineAlerts}
+          onClose={handleCloseAlerts}
+          onGoToComplaint={handleGoToComplaint}
+        />
       )}
     </div>
   );
