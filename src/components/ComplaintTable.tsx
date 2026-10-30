@@ -1,4 +1,5 @@
 import { Complaint } from '../types';
+import { workdaysBetween, isSameDate } from '../utils/workdays';
 
 interface Props {
   complaints: Complaint[];
@@ -20,9 +21,35 @@ function getStatusColor(status: string): string {
   }
 }
 
-function isOverdue(deadline: string): boolean {
-  if (!deadline) return false;
-  return new Date(deadline) < new Date();
+// Вычислить класс для ячейки срока
+function getDeadlineCellClass(deadline: string, isCompleted: boolean): string {
+  if (!deadline || isCompleted) return 'text-gray-600';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dl = new Date(deadline);
+  dl.setHours(0, 0, 0, 0);
+  const daysLeft = workdaysBetween(today, dl);
+
+  if (daysLeft < 0) return 'text-red-700 font-bold bg-red-50';
+  if (daysLeft === 0) return 'text-orange-700 font-bold bg-orange-50';
+  if (daysLeft <= 2) return 'text-amber-700 font-semibold bg-amber-50';
+  return 'text-gray-600';
+}
+
+function getDeadlineTooltip(deadline: string, isCompleted: boolean): string {
+  if (!deadline) return 'Срок не указан';
+  if (isCompleted) return `Срок: ${deadline}`;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dl = new Date(deadline);
+  dl.setHours(0, 0, 0, 0);
+  const daysLeft = workdaysBetween(today, dl);
+
+  if (daysLeft < 0) return `Просрочено на ${Math.abs(daysLeft)} р. дн. (срок: ${deadline})`;
+  if (daysLeft === 0) return `Срок — СЕГОДНЯ (${deadline})`;
+  if (daysLeft === 1) return `Остался 1 р. день (срок: ${deadline})`;
+  if (daysLeft === 2) return `Осталось 2 р. дня (срок: ${deadline})`;
+  return `Срок: ${deadline} (осталось ${daysLeft} р. дн.)`;
 }
 
 export default function ComplaintTable({ complaints, onEdit, onDelete, onToggleComplete }: Props) {
@@ -50,10 +77,17 @@ export default function ComplaintTable({ complaints, onEdit, onDelete, onToggleC
               <th className="px-3 py-3 text-left font-semibold text-gray-600 w-28">Район</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-600 w-36">Объект</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-600 w-28">Поступление</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-600 w-28">Ответ до</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-600 w-32">
+                <span className="flex items-center gap-1">
+                  Ответ до
+                  <span className="text-xs text-gray-400 font-normal">(р.д.)</span>
+                </span>
+              </th>
               <th className="px-3 py-3 text-left font-semibold text-gray-600 w-40">Ответственный</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-600 w-28">Статус</th>
-              <th className="px-3 py-3 text-center font-semibold text-gray-600 w-20">Завершено</th>
+              <th className="px-3 py-3 text-center font-semibold text-gray-600 w-20">
+                <span title="Завершено — кликните для переключения">✓</span>
+              </th>
               <th className="px-3 py-3 text-center font-semibold text-gray-600 w-24">Действия</th>
             </tr>
           </thead>
@@ -70,11 +104,8 @@ export default function ComplaintTable({ complaints, onEdit, onDelete, onToggleC
                   <div className="truncate" title={c.object}>{c.object || '—'}</div>
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">{c.receivedDate}</td>
-                <td className={`px-3 py-3 whitespace-nowrap ${isOverdue(c.responseDeadline) && !c.isCompleted ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                <td className={`px-3 py-3 whitespace-nowrap rounded-sm ${getDeadlineCellClass(c.responseDeadline, c.isCompleted)}`} title={getDeadlineTooltip(c.responseDeadline, c.isCompleted)}>
                   {c.responseDeadline || '—'}
-                  {isOverdue(c.responseDeadline) && !c.isCompleted && (
-                    <span className="ml-1 text-xs text-red-500">⚠</span>
-                  )}
                 </td>
                 <td className="px-3 py-3">
                   {c.department && (
