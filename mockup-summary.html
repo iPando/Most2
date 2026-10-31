@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Макет - Сводный отчёт</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .header {
+            background: #1e3a8a;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .month-selector label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .month-selector select {
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .month-selector select option {
+            background: #1e3a8a;
+            color: white;
+        }
+        
+        .container {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        
+        .report-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .report-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e3a8a;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 1200px;
+        }
+        
+        thead {
+            background: #f9fafb;
+        }
+        
+        th {
+            padding: 10px 8px;
+            text-align: center;
+            font-weight: 600;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+        
+        th.month-header {
+            background: #1e3a8a;
+            color: white;
+            font-size: 16px;
+            padding: 12px;
+        }
+        
+        th.date-header {
+            background: #f3f4f6;
+            font-size: 12px;
+            min-width: 40px;
+        }
+        
+        th.date-header.weekend {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        th.label-header {
+            background: #dbeafe;
+            text-align: left;
+            padding-left: 12px;
+            min-width: 200px;
+        }
+        
+        td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        td.label-cell {
+            text-align: left;
+            padding-left: 12px;
+            font-weight: 500;
+            background: #f9fafb;
+        }
+        
+        td.weekend-cell {
+            background: #fef2f2;
+        }
+        
+        td.data-cell {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        td.data-cell:hover {
+            background: #eff6ff;
+        }
+        
+        td.data-cell.has-data {
+            background: #dbeafe;
+            font-weight: 600;
+            color: #1e40af;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+        }
+        
+        .legend-color.weekend {
+            background: #fee2e2;
+        }
+        
+        .legend-color.workday {
+            background: #f3f4f6;
+        }
+        
+        .legend-color.data {
+            background: #dbeafe;
+        }
+        
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+        
+        .info-box h3 {
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .info-box p {
+            color: #1e3a8a;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info-box ul {
+            margin-top: 8px;
+            padding-left: 20px;
+            color: #1e3a8a;
+            font-size: 14px;
+        }
+        
+        .info-box li {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Сводный отчёт</h1>
+        <div class="month-selector">
+            <label for="monthSelect">Период:</label>
+            <select id="monthSelect">
+                <option value="2026-01" selected>Январь 2026</option>
+                <option value="2025-12">Декабрь 2025</option>
+                <option value="2025-11">Ноябрь 2025</option>
+                <option value="2025-10">Октябрь 2025</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Таблица СПБ -->
+        <div class="report-section">
+            <div class="report-title">Реестр СПБ - Январь 2026</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="month-header" colspan="32">Январь 2026</th>
+                        </tr>
+                        <tr>
+                            <th class="label-header">Показатель</th>
+                            <th class="date-header">01<br><small>Чт</small></th>
+                            <th class="date-header">02<br><small>Пт</small></th>
+                            <th class="date-header weekend">03<br><small>Сб</small></th>
+                            <th class="date-header weekend">04<br><small>Вс</small></th>
+                            <th class="date-header">05<br><small>Пн</small></th>
+                            <th class="date-header">06<br><small>Вт</small></th>
+                            <th class="date-header">07<br><small>Ср</small></th>
+                            <th class="date-header">08<br><small>Чт</small></th>
+                            <th class="date-header">09<br><small>Пт</small></th>
+                            <th class="date-header weekend">10<br><small>Сб</small></th>
+                            <th class="date-header weekend">11<br><small>Вс</small></th>
+                            <th class="date-header">12<br><small>Пн</small></th>
+                            <th class="date-header">13<br><small>Вт</small></th>
+                            <th class="date-header">14<br><small>Ср</small></th>
+                            <th class="date-header">15<br><small>Чт</small></th>
+                            <th class="date-header">16<br><small>Пт</small></th>
+                            <th class="date-header weekend">17<br><small>Сб</small></th>
+                            <th class="date-header weekend">18<br><small>Вс</small></th>
+                            <th class="date-header">19<br><small>Пн</small></th>
+                            <th class="date-header">20<br><small>Вт</small></th>
+                            <th class="date-header">21<br><small>Ср</small></th>
+                            <th class="date-header">22<br><small>Чт</small></th>
+                            <th class="date-header">23<br><small>Пт</small></th>
+                            <th class="date-header weekend">24<br><small>Сб</small></th>
+                            <th class="date-header weekend">25<br><small>Вс</small></th>
+                            <th class="date-header">26<br><small>Пн</small></th>
+                            <th class="date-header">27<br><small>Вт</small></th>
+                            <th class="date-header">28<br><small>Ср</small></th>
+                            <th class="date-header">29<br><small>Чт</small></th>
+                            <th class="date-header">30<br><small>Пт</small></th>
+                            <th class="date-header weekend">31<br><small>Сб</small></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="label-cell">Поступило</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">7</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">6</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">8</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">6</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">7</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">6</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">6</td>
+                            <td class="data-cell has-data">7</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Направлено ответов</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">6</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">6</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Перенаправлено</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Дан промежуточный ответ</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Отклонено</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color weekend"></div>
+                    <span>Выходные дни</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color workday"></div>
+                    <span>Рабочие дни</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color data"></div>
+                    <span>Ячейки с данными (кликабельны)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Таблица ПОС -->
+        <div class="report-section">
+            <div class="report-title">Реестр ПОС - Январь 2026</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="month-header" colspan="32">Январь 2026</th>
+                        </tr>
+                        <tr>
+                            <th class="label-header">Показатель</th>
+                            <th class="date-header">01<br><small>Чт</small></th>
+                            <th class="date-header">02<br><small>Пт</small></th>
+                            <th class="date-header weekend">03<br><small>Сб</small></th>
+                            <th class="date-header weekend">04<br><small>Вс</small></th>
+                            <th class="date-header">05<br><small>Пн</small></th>
+                            <th class="date-header">06<br><small>Вт</small></th>
+                            <th class="date-header">07<br><small>Ср</small></th>
+                            <th class="date-header">08<br><small>Чт</small></th>
+                            <th class="date-header">09<br><small>Пт</small></th>
+                            <th class="date-header weekend">10<br><small>Сб</small></th>
+                            <th class="date-header weekend">11<br><small>Вс</small></th>
+                            <th class="date-header">12<br><small>Пн</small></th>
+                            <th class="date-header">13<br><small>Вт</small></th>
+                            <th class="date-header">14<br><small>Ср</small></th>
+                            <th class="date-header">15<br><small>Чт</small></th>
+                            <th class="date-header">16<br><small>Пт</small></th>
+                            <th class="date-header weekend">17<br><small>Сб</small></th>
+                            <th class="date-header weekend">18<br><small>Вс</small></th>
+                            <th class="date-header">19<br><small>Пн</small></th>
+                            <th class="date-header">20<br><small>Вт</small></th>
+                            <th class="date-header">21<br><small>Ср</small></th>
+                            <th class="date-header">22<br><small>Чт</small></th>
+                            <th class="date-header">23<br><small>Пт</small></th>
+                            <th class="date-header weekend">24<br><small>Сб</small></th>
+                            <th class="date-header weekend">25<br><small>Вс</small></th>
+                            <th class="date-header">26<br><small>Пн</small></th>
+                            <th class="date-header">27<br><small>Вт</small></th>
+                            <th class="date-header">28<br><small>Ср</small></th>
+                            <th class="date-header">29<br><small>Чт</small></th>
+                            <th class="date-header">30<br><small>Пт</small></th>
+                            <th class="date-header weekend">31<br><small>Сб</small></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="label-cell">Поступило</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell has-data">5</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Направлено ответов</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">2</td>
+                            <td class="data-cell has-data">3</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell has-data">4</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Возвращено на координацию</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Переназначен исполнитель</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Отложено</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell weekend-cell">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">0</td>
+                            <td class="data-cell has-data">1</td>
+                            <td class="data-cell weekend-cell">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color weekend"></div>
+                    <span>Выходные дни</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color workday"></div>
+                    <span>Рабочие дни</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color data"></div>
+                    <span>Ячейки с данными (кликабельны)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Информационный блок -->
+        <div class="info-box">
+            <h3>💡 Как это будет работать</h3>
+            <p><strong>Сводный отчёт</strong> автоматически формирует статистику по дням на основе данных из реестров СПБ и ПОС.</p>
+            <ul>
+                <li><strong>Выбор периода:</strong> в будущем будет доступен выпадающий список для выбора месяца и года</li>
+                <li><strong>Автоматический подсчёт:</strong> данные будут автоматически извлекаться из реестров СПБ и ПОС</li>
+                <li><strong>Выходные дни:</strong> автоматически выделяются цветом (субботы и воскресенья)</li>
+                <li><strong>Кликабельные ячейки:</strong> при клике на ячейку будет открываться список обращений за этот день</li>
+                <li><strong>Экспорт:</strong> в будущем будет доступна возможность экспорта отчёта в Excel или PDF</li>
+            </ul>
+            <p style="margin-top: 12px;"><strong>Примечание:</strong> текущий макет показывает примерный вид отчёта с тестовыми данными. Реальные данные будут автоматически подтягиваться из реестров СПБ и ПОС.</p>
+        </div>
+    </div>
+</body>
+</html>

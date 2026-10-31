@@ -32,11 +32,13 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab')[tabName === 'spb' ? 0 : 1].classList.add('active');
     render();
   } else if (tabName === 'summary') {
-    // Для сводной вкладки просто переключаем вид
+    // Для сводной вкладки переключаем вид и обновляем данные
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-summary').classList.add('active');
     document.querySelectorAll('.tab')[2].classList.add('active');
+    initSummaryMonthSelector();
+    renderSummary();
   }
 }
 
@@ -935,4 +937,279 @@ async function init() {
   setInterval(() => renderAlertsButton(), 30 * 60 * 1000);
 }
 
+// ===================================================================
+// СВОДНЫЙ ОТЧЁТ
+// ===================================================================
+let summaryYear = new Date().getFullYear();
+let summaryMonth = new Date().getMonth(); // 0-11
+
+function initSummaryMonthSelector() {
+  const select = document.getElementById('summaryMonth');
+  if (!select) return;
+  
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  
+  select.innerHTML = '';
+  const currentYear = new Date().getFullYear();
+  
+  // Последние 12 месяцев
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(currentYear, new Date().getMonth() - i);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const value = `${year}-${month}`;
+    const label = `${monthNames[month]} ${year}`;
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    if (i === 0) option.selected = true;
+    select.appendChild(option);
+  }
+}
+
+function renderSummary() {
+  const select = document.getElementById('summaryMonth');
+  if (!select) return;
+  
+  const [year, month] = select.value.split('-').map(Number);
+  summaryYear = year;
+  summaryMonth = month;
+  
+  renderSummaryTable('spb', 'summaryTableSPB');
+  renderSummaryTable('pos', 'summaryTablePOS');
+}
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getDayOfWeek(year, month, day) {
+  const date = new Date(year, month, day);
+  const dayOfWeek = date.getDay();
+  const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  return dayNames[dayOfWeek];
+}
+
+function isWeekendDay(year, month, day) {
+  const date = new Date(year, month, day);
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
+function countComplaintsByDate(tabName, year, month, day, criteria) {
+  const tab = TABS[tabName];
+  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  return tab.complaints.filter(c => {
+    switch (criteria) {
+      case 'received':
+        return c.receivedDate === dateStr;
+      case 'answered':
+        // Пока нет данных - заглушка
+        return false;
+      case 'redirected':
+        // Пока нет данных - заглушка
+        return false;
+      case 'intermediate':
+        // Пока нет данных - заглушка
+        return false;
+      case 'rejected':
+        // Пока нет данных - заглушка
+        return false;
+      case 'returned':
+        // Пока нет данных - заглушка
+        return false;
+      case 'reassigned':
+        // Пока нет данных - заглушка
+        return false;
+      case 'postponed':
+        // Пока нет данных - заглушка
+        return false;
+      default:
+        return false;
+    }
+  }).length;
+}
+
+function getComplaintsByDate(tabName, year, month, day, criteria) {
+  const tab = TABS[tabName];
+  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  return tab.complaints.filter(c => {
+    switch (criteria) {
+      case 'received':
+        return c.receivedDate === dateStr;
+      default:
+        return false;
+    }
+  });
+}
+
+function renderSummaryTable(tabName, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const daysInMonth = getDaysInMonth(summaryYear, summaryMonth);
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  const monthName = `${monthNames[summaryMonth]} ${summaryYear}`;
+  
+  const criteria = tabName === 'spb' 
+    ? ['received', 'answered', 'redirected', 'intermediate', 'rejected']
+    : ['received', 'answered', 'returned', 'reassigned', 'postponed'];
+  
+  const labels = tabName === 'spb'
+    ? ['Поступило', 'Направлено ответов', 'Перенаправлено', 'Дан промежуточный ответ', 'Отклонено']
+    : ['Поступило', 'Направлено ответов', 'Возвращено на координацию', 'Переназначен исполнитель', 'Отложено'];
+  
+  let html = '<table class="summary-table">';
+  
+  // Заголовок месяца
+  html += `<thead><tr><th class="month-header" colspan="${daysInMonth + 1}">${monthName}</th></tr>`;
+  
+  // Даты
+  html += '<tr><th class="label-header">Показатель</th>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const isWeekend = isWeekendDay(summaryYear, summaryMonth, day);
+    const dayOfWeek = getDayOfWeek(summaryYear, summaryMonth, day);
+    const dayStr = String(day).padStart(2, '0');
+    html += `<th class="date-header${isWeekend ? ' weekend' : ''}">${dayStr}<br><small>${dayOfWeek}</small></th>`;
+  }
+  html += '</tr></thead><tbody>';
+  
+  // Строки показателей
+  for (let i = 0; i < criteria.length; i++) {
+    html += `<tr><td class="label-cell">${labels[i]}</td>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isWeekend = isWeekendDay(summaryYear, summaryMonth, day);
+      const count = countComplaintsByDate(tabName, summaryYear, summaryMonth, day, criteria[i]);
+      const hasData = count > 0;
+      const clickable = criteria[i] === 'received' && hasData;
+      
+      html += `<td class="${isWeekend ? 'weekend-cell' : 'data-cell'}${hasData ? ' has-data' : ''}"`;
+      if (clickable) {
+        html += ` onclick="showDayDetails('${tabName}', ${summaryYear}, ${summaryMonth}, ${day}, '${criteria[i]}')"`;
+      }
+      html += `>${count}</td>`;
+    }
+    html += '</tr>';
+  }
+  
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function showDayDetails(tabName, year, month, day, criteria) {
+  const complaints = getComplaintsByDate(tabName, year, month, day, criteria);
+  const dateStr = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
+  const tabLabel = tabName === 'spb' ? 'СПБ' : 'ПОС';
+  
+  const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 
+                      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const dateLabel = `${day} ${monthNames[month]} ${year}`;
+  
+  let html = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal day-details-modal">
+      <div class="day-details-header">
+        <h2>Обращения за ${dateLabel}</h2>
+        <p>Реестр ${tabLabel} • Поступило: ${complaints.length}</p>
+      </div>
+      <div class="day-details-body">`;
+  
+  if (complaints.length === 0) {
+    html += `<div class="day-details-empty">
+      <div class="day-details-empty-icon">📭</div>
+      <p>Нет обращений за этот день</p>
+    </div>`;
+  } else {
+    html += '<div class="day-details-list">';
+    for (const c of complaints) {
+      const statusClass = `status-${c.status}`;
+      html += `<div class="day-details-item">
+        <div class="day-details-item-header">
+          <span class="day-details-item-number">${esc(c.complaintNumber)}</span>
+          <span class="day-details-item-status ${statusClass}">${esc(c.status)}</span>
+        </div>
+        <div class="day-details-item-text">${esc(c.complaintText)}</div>
+        <div class="day-details-item-meta">
+          <span>📍 ${esc(c.district)}${c.object ? `, ${esc(c.object)}` : ''}</span>
+          <span>👤 ${esc(getResponsiblesDisplay(c))}</span>
+          <span>📅 Ответ до: ${c.responseDeadline || 'не указан'}</span>
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  
+  html += `</div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal()">Закрыть</button>
+      </div>
+    </div>
+  </div>`;
+  
+  document.getElementById('modals').innerHTML = html;
+}
+
+function exportSummaryToExcel() {
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  const monthName = `${monthNames[summaryMonth]} ${summaryYear}`;
+  
+  let csv = '\uFEFF'; // BOM для UTF-8 в Excel
+  csv += `Сводный отчёт - ${monthName}\n\n`;
+  
+  // СПБ
+  csv += 'Реестр СПБ\n';
+  csv += generateSummaryCSV('spb');
+  
+  csv += '\n\n';
+  
+  // ПОС
+  csv += 'Реестр ПОС\n';
+  csv += generateSummaryCSV('pos');
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Сводный_отчет_${monthName.replace(' ', '_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  showNotification('success', 'Отчёт экспортирован в Excel');
+}
+
+function generateSummaryCSV(tabName) {
+  const daysInMonth = getDaysInMonth(summaryYear, summaryMonth);
+  
+  const criteria = tabName === 'spb' 
+    ? ['received', 'answered', 'redirected', 'intermediate', 'rejected']
+    : ['received', 'answered', 'returned', 'reassigned', 'postponed'];
+  
+  const labels = tabName === 'spb'
+    ? ['Поступило', 'Направлено ответов', 'Перенаправлено', 'Дан промежуточный ответ', 'Отклонено']
+    : ['Поступило', 'Направлено ответов', 'Возвращено на координацию', 'Переназначен исполнитель', 'Отложено'];
+  
+  let csv = 'Показатель';
+  for (let day = 1; day <= daysInMonth; day++) {
+    csv += `;${String(day).padStart(2, '0')}`;
+  }
+  csv += '\n';
+  
+  for (let i = 0; i < criteria.length; i++) {
+    csv += labels[i];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const count = countComplaintsByDate(tabName, summaryYear, summaryMonth, day, criteria[i]);
+      csv += `;${count}`;
+    }
+    csv += '\n';
+  }
+  
+  return csv;
+}
+
 init();
+initSummaryMonthSelector();
+renderSummary();
