@@ -91,6 +91,8 @@ input, select, textarea, button { font-family: inherit; font-size: inherit; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
 th { padding: 10px 8px; text-align: left; font-weight: 600; color: #4b5563; white-space: nowrap; }
+th.sortable-header { cursor: pointer; user-select: none; transition: background 0.2s; }
+th.sortable-header:hover { background: #e5e7eb; }
 td { padding: 8px 8px; border-bottom: 1px solid #f3f4f6; }
 tbody tr { transition: background 0.1s; }
 tbody tr:hover { background: #f9fafb; }
