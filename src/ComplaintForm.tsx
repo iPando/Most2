@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Complaint, Config } from './App';
+import type { Complaint, Config } from './types';
 
 interface ComplaintFormProps {
   config: Config;
