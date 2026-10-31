@@ -9,8 +9,8 @@ const STATUSES = ["Новая","В работе","Ожидает ответа","
 // СОСТОЯНИЕ ПРИЛОЖЕНИЯ
 // ===================================================================
 const TABS = {
-  spb: { name: 'СПБ', complaints: [], fileHandle: null, fileName: '', lastSaved: '', isSaving: false, connectionStatus: 'checking', alertsDismissed: false, saveTimeout: null, deadlineTimer: null },
-  pos: { name: 'ПОС', complaints: [], fileHandle: null, fileName: '', lastSaved: '', isSaving: false, connectionStatus: 'checking', alertsDismissed: false, saveTimeout: null, deadlineTimer: null }
+  spb: { name: 'СПБ', complaints: [], fileHandle: null, fileName: '', lastSaved: '', isSaving: false, connectionStatus: 'checking', alertsDismissed: false, saveTimeout: null, deadlineTimer: null, sortDirection: 'desc' },
+  pos: { name: 'ПОС', complaints: [], fileHandle: null, fileName: '', lastSaved: '', isSaving: false, connectionStatus: 'checking', alertsDismissed: false, saveTimeout: null, deadlineTimer: null, sortDirection: 'desc' }
 };
 let activeTab = 'spb';
 let CONFIG = { districts: [...DISTRICTS], departments: JSON.parse(JSON.stringify(DEPARTMENTS)), statuses: [...STATUSES] };
@@ -406,7 +406,7 @@ function getFiltered() {
   const hc = document.getElementById(getElementId('hideCompleted')).checked;
   const sf = document.getElementById(getElementId('statusFilter')).value;
   const s = document.getElementById(getElementId('searchInput')).value.toLowerCase();
-  return tab.complaints.filter(c => {
+  let filtered = tab.complaints.filter(c => {
     if (hc && c.isCompleted) return false;
     if (sf && c.status !== sf) return false;
     if (s) {
@@ -416,6 +416,25 @@ function getFiltered() {
     }
     return true;
   });
+  
+  // Сортировка по дате поступления
+  filtered.sort((a, b) => {
+    const dateA = a.receivedDate || '';
+    const dateB = b.receivedDate || '';
+    if (tab.sortDirection === 'desc') {
+      return dateB.localeCompare(dateA);
+    } else {
+      return dateA.localeCompare(dateB);
+    }
+  });
+  
+  return filtered;
+}
+
+function toggleSort() {
+  const tab = getTab();
+  tab.sortDirection = tab.sortDirection === 'desc' ? 'asc' : 'desc';
+  render();
 }
 
 function saveFilter() {
@@ -498,6 +517,7 @@ function renderStats() {
 
 function renderTable() {
   const ct = document.getElementById(getElementId('tableContainer'));
+  const tab = getTab();
   const f = getFiltered();
   if (f.length === 0) {
     ct.innerHTML = `<div class="table-wrapper"><div class="empty-state"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><h3>Нет обращений</h3><p>Нажмите «Новое обращение» чтобы добавить запись</p></div></div>`;
@@ -513,7 +533,8 @@ function renderTable() {
     const chc = c.isCompleted ? 'checked' : '';
     rows += `<tr class="${cc}"><td class="cell-id">${c.id}</td><td class="cell-number">${esc(c.complaintNumber)}</td><td class="cell-text" title="${esc(c.complaintText)}" onclick="toggleExpand(this,event)">${esc(c.complaintText)}</td><td class="cell-district">${esc(c.district)}</td><td class="cell-object" title="${esc(c.object)}" onclick="toggleExpand(this,event)">${esc(c.object || '—')}</td><td class="cell-date">${c.receivedDate}</td><td class="cell-date ${dlc}" title="${esc(dlt)}">${c.responseDeadline || '—'}</td><td class="cell-dept">${c.department ? `<div class="dept-name">${esc(c.department)}</div><div class="emp-name">${esc(getResponsiblesDisplay(c))}</div>` : '<span style="color:#9ca3af">—</span>'}</td><td><span class="status-pill ${stc}">${esc(c.status)}</span></td><td style="text-align:center"><button class="complete-btn ${chc}" onclick="toggleComplete(${c.id})" title="${c.isCompleted ? 'Завершено' : 'Не завершено'}"><svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></button></td><td><div class="actions-cell"><button class="action-btn edit" onclick="showEditForm(${c.id})" title="Редактировать"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button class="action-btn delete" onclick="deleteComplaint(${c.id})" title="Удалить"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></td></tr>`;
   }
-  ct.innerHTML = `<div class="table-wrapper"><div class="table-scroll"><table><thead><tr><th>№</th><th>Номер обр.</th><th>Текст жалобы</th><th>Район</th><th>Объект</th><th>Поступление</th><th>Ответ до <span style="font-weight:400;color:#9ca3af;font-size:11px">(р.д.)</span></th><th>Ответственный</th><th>Статус</th><th style="text-align:center">✓</th><th style="text-align:center">Действия</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  const sortIcon = tab.sortDirection === 'desc' ? ' ↓' : ' ↑';
+  ct.innerHTML = `<div class="table-wrapper"><div class="table-scroll"><table><thead><tr><th>№</th><th>Номер обр.</th><th>Текст жалобы</th><th>Район</th><th>Объект</th><th class="sortable-header" onclick="toggleSort()" title="Нажмите для сортировки">Поступление${sortIcon}</th><th>Ответ до <span style="font-weight:400;color:#9ca3af;font-size:11px">(р.д.)</span></th><th>Ответственный</th><th>Статус</th><th style="text-align:center">✓</th><th style="text-align:center">Действия</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 // ===================================================================
