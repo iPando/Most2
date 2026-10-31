@@ -22,7 +22,7 @@
         <div class="tabs">
           <button class="tab active" onclick="switchTab('spb')">СПБ</button>
           <button class="tab" onclick="switchTab('pos')">ПОС</button>
-          <button class="tab" onclick="switchTab('summary')">Сводная</button>
+
         </div>
       </div>
 
@@ -142,52 +142,7 @@
       <div id="tableContainer-pos"></div>
     </div>
 
-    <!-- Вкладка Сводная -->
-    <div class="tab-content" id="tab-summary">
-      <div class="summary-header">
-        <div class="summary-title">📊 Сводный отчёт</div>
-        <div class="summary-controls">
-          <label>Период:</label>
-          <select id="summaryMonth" onchange="renderSummary()">
-          </select>
-          <button class="btn btn-success btn-sm" onclick="exportSummaryToExcel()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Экспорт в Excel
-          </button>
-        </div>
-      </div>
-      
-      <div class="summary-section">
-        <div class="summary-section-title">Реестр СПБ</div>
-        <div class="table-wrapper">
-          <div id="summaryTableSPB"></div>
-        </div>
-      </div>
-      
-      <div class="summary-section">
-        <div class="summary-section-title">Реестр ПОС</div>
-        <div class="table-wrapper">
-          <div id="summaryTablePOS"></div>
-        </div>
-      </div>
-      
-      <div class="summary-legend">
-        <div class="legend-item">
-          <div class="legend-color weekend"></div>
-          <span>Выходные дни</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color workday"></div>
-          <span>Рабочие дни</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color data"></div>
-          <span>Ячейки с данными (кликабельны)</span>
-        </div>
-      </div>
-    </div>
+
   </div>
 
   <!-- ===== MODALS ===== -->
