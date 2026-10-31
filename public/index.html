@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Реестр обращений - Мостотрест</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="header-icon">🌉</div>
+        <div>
+          <h1>Реестр обращений</h1>
+          <p>Мостотрест</p>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('spb')">СПБ</button>
+          <button class="tab" onclick="switchTab('pos')">ПОС</button>
+          <button class="tab" onclick="switchTab('summary')">Сводная</button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div id="alertsBtn"></div>
+        <div id="connectionStatus"></div>
+        <button class="icon-btn" onclick="showConfigModal()" title="Настройки">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="showInfo()" title="Справка">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="container">
+    <!-- Вкладка СПБ -->
+    <div class="tab-content active" id="tab-spb">
+      <div id="banners"></div>
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <button class="btn btn-primary" id="addBtn" onclick="showAddForm()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Новое обращение
+          </button>
+          <div class="search-input">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Поиск по номеру, тексту, объекту, сотруднику..." oninput="render()">
+          </div>
+          <select class="select-input" id="statusFilter" onchange="render()">
+            <option value="">Все статусы</option>
+          </select>
+          <label class="checkbox-label">
+            <input type="checkbox" id="hideCompleted" onchange="saveFilter(); render()">
+            Скрыть завершённые
+          </label>
+          <button class="btn btn-success btn-sm" onclick="exportData()" title="Экспорт">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Экспорт
+          </button>
+          <button class="btn btn-warning btn-sm" onclick="importData()" title="Импорт">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            Импорт
+          </button>
+          <button class="btn btn-secondary btn-sm" id="disconnectBtn" style="display:none" onclick="disconnectFile()" title="Отключить файл">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+            </svg>
+            Отключить
+          </button>
+        </div>
+        <div class="toolbar-stats" id="stats"></div>
+      </div>
+      <div id="tableContainer"></div>
+    </div>
+
+    <!-- Вкладка ПОС -->
+    <div class="tab-content" id="tab-pos">
+      <div id="banners-pos"></div>
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <button class="btn btn-primary" id="addBtn-pos" onclick="showAddForm()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Новое обращение
+          </button>
+          <div class="search-input">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="searchInput-pos" placeholder="Поиск по номеру, тексту, объекту, сотруднику..." oninput="render()">
+          </div>
+          <select class="select-input" id="statusFilter-pos" onchange="render()">
+            <option value="">Все статусы</option>
+          </select>
+          <label class="checkbox-label">
+            <input type="checkbox" id="hideCompleted-pos" onchange="saveFilter(); render()">
+            Скрыть завершённые
+          </label>
+          <button class="btn btn-success btn-sm" onclick="exportData()" title="Экспорт">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Экспорт
+          </button>
+          <button class="btn btn-warning btn-sm" onclick="importData()" title="Импорт">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            Импорт
+          </button>
+          <button class="btn btn-secondary btn-sm" id="disconnectBtn-pos" style="display:none" onclick="disconnectFile()" title="Отключить файл">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+            </svg>
+            Отключить
+          </button>
+        </div>
+        <div class="toolbar-stats" id="stats-pos"></div>
+      </div>
+      <div id="tableContainer-pos"></div>
+    </div>
+
+    <!-- Вкладка Сводная -->
+    <div class="tab-content" id="tab-summary">
+      <div style="background: white; border: 2px dashed #d1d5db; border-radius: 12px; padding: 80px 24px; text-align: center; color: #6b7280;">
+        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📊</div>
+        <h2 style="font-size: 22px; color: #374151; margin-bottom: 8px;">Сводный отчёт</h2>
+        <p style="font-size: 14px;">Здесь будут выводиться отчёты по данным из обеих таблиц (СПБ и ПОС).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+  <div id="modals"></div>
+
+  <!-- ===== NOTIFICATION ===== -->
+  <div id="notification" style="display:none"></div>
+
+  <!-- ===== FLOATING BUTTON ===== -->
+  <button class="btn btn-primary floating-add-btn" id="floatingAddBtn" onclick="showAddForm()" style="display:none">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    Новое обращение
+  </button>
+
+  <script src="app.js"></script>
+</body>
+</html>
