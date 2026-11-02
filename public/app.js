@@ -554,6 +554,7 @@ function showEditForm(id) {
     else if (c.responsible && typeof c.responsible === 'string' && c.responsible.trim()) responsibles = [c.responsible];
     if (responsibles.length === 0) responsibles = [''];
     const data = {
+      id: c.id,
       complaintNumber: c.complaintNumber || '', complaintText: c.complaintText || '', district: c.district || '',
       object: c.object || '', receivedDate: c.receivedDate || '', responseDeadline: c.responseDeadline || '',
       department: c.department || '', responsibles: responsibles, status: c.status || 'Новая', isCompleted: !!c.isCompleted
