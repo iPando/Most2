@@ -543,7 +543,7 @@ async function pasteFromClipboard(fieldId) {
 // ===================================================================
 function showAddForm() {
   const t = new Date().toISOString().slice(0, 10);
-  showForm({ complaintNumber: '', complaintText: '', district: '', object: '', receivedDate: t, responseDeadline: '', department: '', responsibles: [''], status: 'Новая', isCompleted: false }, true, false);
+  showForm({ complaintNumber: '', complaintText: '', district: '', object: '', receivedDate: t, responseDeadline: '', department: '', responsibles: [''], status: 'Новая', isCompleted: false, statusChangeDate: t }, true, false);
 }
 
 function showEditForm(id) {
@@ -581,7 +581,7 @@ function showForm(data, isNew, isCompleted = false) {
   if (!Array.isArray(data.responsibles) || data.responsibles.length === 0) data.responsibles = [''];
   window._formResponsibles = [...data.responsibles];
   window._formDepartment = data.department || '';
-  document.getElementById('modals').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-header"><h2>${isNew ? 'Новое обращение' : 'Редактирование'}</h2><button class="modal-close" onclick="closeModal()"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="modal-body"><div class="form-group"><label>Номер обращения <span class="required">*</span></label><div class="input-with-paste"><input type="text" id="f_number" value="${esc(data.complaintNumber)}" placeholder="ОБР-2024-001"><button class="paste-btn" onclick="pasteFromClipboard('f_number')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-group"><label>Текст жалобы <span class="required">*</span></label><div class="input-with-paste"><textarea id="f_text">${esc(data.complaintText)}</textarea><button class="paste-btn" onclick="pasteFromClipboard('f_text')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-row"><div class="form-group"><label>Район <span class="required">*</span></label><select id="f_district"><option value="">Выберите район</option>${dOpts}</select></div><div class="form-group"><label>Объект</label><div class="input-with-paste"><input type="text" id="f_object" value="${esc(data.object)}" placeholder="Адрес или название"><button class="paste-btn" onclick="pasteFromClipboard('f_object')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div></div><div class="form-row"><div class="form-group"><label>Дата поступления</label><input type="date" id="f_received" value="${data.receivedDate}"><div class="hint">Автоматически — текущая дата</div></div><div class="form-group"><label>Ответ до</label><input type="date" id="f_deadline" value="${data.responseDeadline}"></div></div><div class="form-row"><div class="form-group"><label>Отдел</label><select id="f_department" onchange="onDeptChange()"><option value="">Выберите отдел</option>${depOpts}</select></div><div class="form-group"><label>Ответственные сотрудники</label><div id="responsiblesContainer"></div></div></div><div class="form-group"><label>Статус</label><select id="f_status">${stOpts}</select></div>${!isNew ? `<div class="form-group"><label>Дата изменения статуса</label><input type="date" id="f_statusChangeDate" value="${data.statusChangeDate}"><div class="hint">Дата фактической смены текущего статуса</div></div>` : ''}</div><div class="modal-footer"><div style="flex:1">${!isNew ? `<button id="completeToggleBtn" class="btn ${isCompleted ? 'btn-secondary' : 'btn-success'}" onclick="toggleCompleteFromModal(${data.id}, ${!isCompleted})">${isCompleted ? 'Отменить завершение' : 'Завершить'}</button>` : ''}</div><button class="btn btn-secondary" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="submitForm(${isNew}, ${data.id || null})">${isNew ? 'Добавить' : 'Сохранить'}</button></div></div></div>`;
+  document.getElementById('modals').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-header"><h2>${isNew ? 'Новое обращение' : 'Редактирование'}</h2><button class="modal-close" onclick="closeModal()"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="modal-body"><div class="form-group"><label>Номер обращения <span class="required">*</span></label><div class="input-with-paste"><input type="text" id="f_number" value="${esc(data.complaintNumber)}" placeholder="ОБР-2024-001"><button class="paste-btn" onclick="pasteFromClipboard('f_number')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-group"><label>Текст жалобы <span class="required">*</span></label><div class="input-with-paste"><textarea id="f_text">${esc(data.complaintText)}</textarea><button class="paste-btn" onclick="pasteFromClipboard('f_text')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-row"><div class="form-group"><label>Район <span class="required">*</span></label><select id="f_district"><option value="">Выберите район</option>${dOpts}</select></div><div class="form-group"><label>Объект</label><div class="input-with-paste"><input type="text" id="f_object" value="${esc(data.object)}" placeholder="Адрес или название"><button class="paste-btn" onclick="pasteFromClipboard('f_object')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div></div><div class="form-row"><div class="form-group"><label>Дата поступления</label><input type="date" id="f_received" value="${data.receivedDate}"><div class="hint">Автоматически — текущая дата</div></div><div class="form-group"><label>Ответ до</label><input type="date" id="f_deadline" value="${data.responseDeadline}"></div></div><div class="form-row"><div class="form-group"><label>Отдел</label><select id="f_department" onchange="onDeptChange()"><option value="">Выберите отдел</option>${depOpts}</select></div><div class="form-group"><label>Ответственные сотрудники</label><div id="responsiblesContainer"></div></div></div><div class="form-group"><label>Статус</label><select id="f_status" onchange="onStatusChange()">${stOpts}</select></div>${!isNew ? `<div class="form-group"><label>Дата изменения статуса</label><input type="date" id="f_statusChangeDate" value="${data.statusChangeDate}"><div class="hint">Дата фактической смены текущего статуса</div></div>` : ''}</div><div class="modal-footer"><div style="flex:1">${!isNew ? `<button id="completeToggleBtn" class="btn ${isCompleted ? 'btn-secondary' : 'btn-success'}" onclick="toggleCompleteFromModal(${data.id}, ${!isCompleted})">${isCompleted ? 'Отменить завершение' : 'Завершить'}</button>` : ''}</div><button class="btn btn-secondary" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="submitForm(${isNew}, ${data.id || null})">${isNew ? 'Добавить' : 'Сохранить'}</button></div></div></div>`;
   setTimeout(() => renderResponsibles(), 0);
 }
 
@@ -590,6 +590,15 @@ function onDeptChange() {
   window._formDepartment = d;
   window._formResponsibles = [''];
   renderResponsibles();
+}
+
+function onStatusChange() {
+  // При изменении статуса автоматически проставляем текущую дату
+  const statusChangeDateEl = document.getElementById('f_statusChangeDate');
+  if (statusChangeDateEl) {
+    const today = new Date().toISOString().slice(0, 10);
+    statusChangeDateEl.value = today;
+  }
 }
 
 function renderResponsibles() {
@@ -637,12 +646,13 @@ function submitForm(isNew, id) {
     status: document.getElementById('f_status').value,
     isCompleted: currentComplaint ? currentComplaint.isCompleted : false
   };
-  // Добавляем дату изменения статуса только при редактировании
-  if (!isNew) {
-    const statusChangeDateEl = document.getElementById('f_statusChangeDate');
-    if (statusChangeDateEl) {
-      data.statusChangeDate = statusChangeDateEl.value;
-    }
+  // Сохраняем дату изменения статуса
+  const statusChangeDateEl = document.getElementById('f_statusChangeDate');
+  if (statusChangeDateEl) {
+    data.statusChangeDate = statusChangeDateEl.value;
+  } else if (isNew) {
+    // При создании нового обращения используем дату поступления
+    data.statusChangeDate = data.receivedDate;
   }
   if (isNew) addComplaint(data); else updateComplaint(id, data);
   closeModal();
