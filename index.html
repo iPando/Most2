@@ -22,7 +22,7 @@
         <div class="tabs">
           <button class="tab active" onclick="switchTab('spb')">СПБ</button>
           <button class="tab" onclick="switchTab('pos')">ПОС</button>
-          <button class="tab" onclick="switchTab('statistics')">Статистика</button>
+          <button class="tab" onclick="switchTab('statistics')">Статистика обращений портала СПб</button>
         </div>
       </div>
 
@@ -147,9 +147,7 @@
       <div class="statistics-header">
         <h2>📊 Статистика обращений портала СПб</h2>
         <div class="statistics-controls">
-          <button class="btn btn-secondary btn-sm" onclick="changeStatisticsMonth(-1)">←</button>
           <select id="statisticsMonth" onchange="renderStatistics()"></select>
-          <button class="btn btn-secondary btn-sm" onclick="changeStatisticsMonth(1)">→</button>
         </div>
       </div>
       <div id="statisticsTableContainer"></div>
