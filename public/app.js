@@ -21,7 +21,7 @@ function getTab() { return TABS[activeTab]; }
 // ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
 // ===================================================================
 function switchTab(tabName) {
-  if (!TABS[tabName] && tabName !== 'summary') return;
+  if (!TABS[tabName] && tabName !== 'statistics') return;
   
   // Если переключились на вкладку с данными (spb или pos)
   if (tabName === 'spb' || tabName === 'pos') {
@@ -29,16 +29,17 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-' + tabName).classList.add('active');
-    document.querySelectorAll('.tab')[tabName === 'spb' ? 0 : 1].classList.add('active');
+    const tabIndex = tabName === 'spb' ? 0 : 1;
+    document.querySelectorAll('.tab')[tabIndex].classList.add('active');
     render();
-  } else if (tabName === 'summary') {
-    // Для сводной вкладки переключаем вид и обновляем данные
+  } else if (tabName === 'statistics') {
+    // Для вкладки статистики переключаем вид и обновляем данные
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-summary').classList.add('active');
+    document.getElementById('tab-statistics').classList.add('active');
     document.querySelectorAll('.tab')[2].classList.add('active');
-    initSummaryMonthSelector();
-    renderSummary();
+    initStatisticsMonthSelector();
+    renderStatistics();
   }
 }
 
@@ -557,7 +558,8 @@ function showEditForm(id) {
       id: c.id,
       complaintNumber: c.complaintNumber || '', complaintText: c.complaintText || '', district: c.district || '',
       object: c.object || '', receivedDate: c.receivedDate || '', responseDeadline: c.responseDeadline || '',
-      department: c.department || '', responsibles: responsibles, status: c.status || 'Новая', isCompleted: !!c.isCompleted
+      department: c.department || '', responsibles: responsibles, status: c.status || 'Новая', isCompleted: !!c.isCompleted,
+      statusChangeDate: c.statusChangeDate || ''
     };
     showForm(data, false, c.isCompleted);
   }
@@ -579,7 +581,7 @@ function showForm(data, isNew, isCompleted = false) {
   if (!Array.isArray(data.responsibles) || data.responsibles.length === 0) data.responsibles = [''];
   window._formResponsibles = [...data.responsibles];
   window._formDepartment = data.department || '';
-  document.getElementById('modals').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-header"><h2>${isNew ? 'Новое обращение' : 'Редактирование'}</h2><button class="modal-close" onclick="closeModal()"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="modal-body"><div class="form-group"><label>Номер обращения <span class="required">*</span></label><div class="input-with-paste"><input type="text" id="f_number" value="${esc(data.complaintNumber)}" placeholder="ОБР-2024-001"><button class="paste-btn" onclick="pasteFromClipboard('f_number')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-group"><label>Текст жалобы <span class="required">*</span></label><div class="input-with-paste"><textarea id="f_text">${esc(data.complaintText)}</textarea><button class="paste-btn" onclick="pasteFromClipboard('f_text')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-row"><div class="form-group"><label>Район <span class="required">*</span></label><select id="f_district"><option value="">Выберите район</option>${dOpts}</select></div><div class="form-group"><label>Объект</label><div class="input-with-paste"><input type="text" id="f_object" value="${esc(data.object)}" placeholder="Адрес или название"><button class="paste-btn" onclick="pasteFromClipboard('f_object')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div></div><div class="form-row"><div class="form-group"><label>Дата поступления</label><input type="date" id="f_received" value="${data.receivedDate}"><div class="hint">Автоматически — текущая дата</div></div><div class="form-group"><label>Ответ до</label><input type="date" id="f_deadline" value="${data.responseDeadline}"></div></div><div class="form-row"><div class="form-group"><label>Отдел</label><select id="f_department" onchange="onDeptChange()"><option value="">Выберите отдел</option>${depOpts}</select></div><div class="form-group"><label>Ответственные сотрудники</label><div id="responsiblesContainer"></div></div></div><div class="form-group"><label>Статус</label><select id="f_status">${stOpts}</select></div></div><div class="modal-footer"><div style="flex:1">${!isNew ? `<button id="completeToggleBtn" class="btn ${isCompleted ? 'btn-secondary' : 'btn-success'}" onclick="toggleCompleteFromModal(${data.id}, ${!isCompleted})">${isCompleted ? 'Отменить завершение' : 'Завершить'}</button>` : ''}</div><button class="btn btn-secondary" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="submitForm(${isNew}, ${data.id || null})">${isNew ? 'Добавить' : 'Сохранить'}</button></div></div></div>`;
+  document.getElementById('modals').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-header"><h2>${isNew ? 'Новое обращение' : 'Редактирование'}</h2><button class="modal-close" onclick="closeModal()"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="modal-body"><div class="form-group"><label>Номер обращения <span class="required">*</span></label><div class="input-with-paste"><input type="text" id="f_number" value="${esc(data.complaintNumber)}" placeholder="ОБР-2024-001"><button class="paste-btn" onclick="pasteFromClipboard('f_number')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-group"><label>Текст жалобы <span class="required">*</span></label><div class="input-with-paste"><textarea id="f_text">${esc(data.complaintText)}</textarea><button class="paste-btn" onclick="pasteFromClipboard('f_text')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div><div class="form-row"><div class="form-group"><label>Район <span class="required">*</span></label><select id="f_district"><option value="">Выберите район</option>${dOpts}</select></div><div class="form-group"><label>Объект</label><div class="input-with-paste"><input type="text" id="f_object" value="${esc(data.object)}" placeholder="Адрес или название"><button class="paste-btn" onclick="pasteFromClipboard('f_object')" title="Вставить из буфера"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button></div></div></div><div class="form-row"><div class="form-group"><label>Дата поступления</label><input type="date" id="f_received" value="${data.receivedDate}"><div class="hint">Автоматически — текущая дата</div></div><div class="form-group"><label>Ответ до</label><input type="date" id="f_deadline" value="${data.responseDeadline}"></div></div><div class="form-row"><div class="form-group"><label>Отдел</label><select id="f_department" onchange="onDeptChange()"><option value="">Выберите отдел</option>${depOpts}</select></div><div class="form-group"><label>Ответственные сотрудники</label><div id="responsiblesContainer"></div></div></div><div class="form-group"><label>Статус</label><select id="f_status">${stOpts}</select></div>${!isNew ? `<div class="form-group"><label>Дата изменения статуса</label><input type="date" id="f_statusChangeDate" value="${data.statusChangeDate}"><div class="hint">Дата фактической смены текущего статуса</div></div>` : ''}</div><div class="modal-footer"><div style="flex:1">${!isNew ? `<button id="completeToggleBtn" class="btn ${isCompleted ? 'btn-secondary' : 'btn-success'}" onclick="toggleCompleteFromModal(${data.id}, ${!isCompleted})">${isCompleted ? 'Отменить завершение' : 'Завершить'}</button>` : ''}</div><button class="btn btn-secondary" onclick="closeModal()">Отмена</button><button class="btn btn-primary" onclick="submitForm(${isNew}, ${data.id || null})">${isNew ? 'Добавить' : 'Сохранить'}</button></div></div></div>`;
   setTimeout(() => renderResponsibles(), 0);
 }
 
@@ -635,6 +637,13 @@ function submitForm(isNew, id) {
     status: document.getElementById('f_status').value,
     isCompleted: currentComplaint ? currentComplaint.isCompleted : false
   };
+  // Добавляем дату изменения статуса только при редактировании
+  if (!isNew) {
+    const statusChangeDateEl = document.getElementById('f_statusChangeDate');
+    if (statusChangeDateEl) {
+      data.statusChangeDate = statusChangeDateEl.value;
+    }
+  }
   if (isNew) addComplaint(data); else updateComplaint(id, data);
   closeModal();
 }
@@ -938,6 +947,193 @@ async function init() {
   render();
   
   setInterval(() => renderAlertsButton(), 30 * 60 * 1000);
+}
+
+// ===================================================================
+// СТАТИСТИКА ОБРАЩЕНИЙ
+// ===================================================================
+let statisticsYear = new Date().getFullYear();
+let statisticsMonth = new Date().getMonth();
+
+function initStatisticsMonthSelector() {
+  const select = document.getElementById('statisticsMonth');
+  if (!select) return;
+  
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  
+  select.innerHTML = '';
+  const currentYear = new Date().getFullYear();
+  
+  // Последние 12 месяцев
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(currentYear, new Date().getMonth() - i);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const value = `${year}-${month}`;
+    const label = `${monthNames[month]} ${year}`;
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    if (year === statisticsYear && month === statisticsMonth) option.selected = true;
+    select.appendChild(option);
+  }
+}
+
+function changeStatisticsMonth(delta) {
+  statisticsMonth += delta;
+  if (statisticsMonth < 0) {
+    statisticsMonth = 11;
+    statisticsYear--;
+  } else if (statisticsMonth > 11) {
+    statisticsMonth = 0;
+    statisticsYear++;
+  }
+  
+  // Обновляем селектор
+  const select = document.getElementById('statisticsMonth');
+  if (select) {
+    select.value = `${statisticsYear}-${statisticsMonth}`;
+  }
+  
+  renderStatistics();
+}
+
+function parseStatisticsData() {
+  // Берем данные из вкладки СПБ
+  const complaints = TABS.spb.complaints || [];
+  
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  
+  // Инициализируем структуру для хранения статистики по дням
+  const daysInMonth = new Date(statisticsYear, statisticsMonth + 1, 0).getDate();
+  const stats = {
+    received: {},      // Поступило
+    answered: {},      // Направлено ответов
+    redirected: {},    // Перенаправлено
+    intermediate: {},  // Дан промежуточный ответ
+    rejected: {}       // Отклонено
+  };
+  
+  // Инициализируем все дни нулями
+  for (let day = 1; day <= daysInMonth; day++) {
+    stats.received[day] = 0;
+    stats.answered[day] = 0;
+    stats.redirected[day] = 0;
+    stats.intermediate[day] = 0;
+    stats.rejected[day] = 0;
+  }
+  
+  // Парсим данные обращений
+  for (const complaint of complaints) {
+    // 1. Поступило - по дате поступления
+    if (complaint.receivedDate) {
+      const date = new Date(complaint.receivedDate);
+      if (date.getFullYear() === statisticsYear && date.getMonth() === statisticsMonth) {
+        const day = date.getDate();
+        stats.received[day]++;
+      }
+    }
+    
+    // 2-5. Остальные метрики - по статусу
+    // Используем statusChangeDate если есть, иначе receivedDate как fallback
+    const status = complaint.status;
+    const statusChangeDate = complaint.statusChangeDate ? new Date(complaint.statusChangeDate) : null;
+    const receivedDate = complaint.receivedDate ? new Date(complaint.receivedDate) : null;
+    const baseDate = statusChangeDate || receivedDate;
+    
+    if (baseDate && baseDate.getFullYear() === statisticsYear && baseDate.getMonth() === statisticsMonth) {
+      const day = baseDate.getDate();
+      
+      // Проверяем точное совпадение статуса
+      if (status === 'Направлено ответов') {
+        stats.answered[day]++;
+      } else if (status === 'Перенаправлено') {
+        stats.redirected[day]++;
+      } else if (status === 'Дан промежуточный ответ') {
+        stats.intermediate[day]++;
+      } else if (status === 'Отклонена') {
+        stats.rejected[day]++;
+      }
+    }
+  }
+  
+  return { stats, daysInMonth, monthName: `${monthNames[statisticsMonth]} ${statisticsYear}` };
+}
+
+function renderStatistics() {
+  const container = document.getElementById('statisticsTableContainer');
+  if (!container) return;
+  
+  const { stats, daysInMonth, monthName } = parseStatisticsData();
+  
+  // Определяем выходные дни
+  const weekends = new Set();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(statisticsYear, statisticsMonth, day);
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      weekends.add(day);
+    }
+  }
+  
+  // Строим HTML таблицу
+  let html = '<div class="statistics-table-wrapper"><table class="statistics-table">';
+  
+  // Заголовок с названием месяца
+  html += `<thead><tr><th colspan="${daysInMonth + 1}" class="statistics-month-header">${monthName}</th></tr>`;
+  
+  // Дни месяца
+  html += '<tr><th class="statistics-label-header">Показатель</th>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const isWeekend = weekends.has(day);
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(statisticsMonth + 1).padStart(2, '0');
+    html += `<th class="statistics-date-header${isWeekend ? ' weekend' : ''}">${dayStr}.${monthStr}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+  
+  // Строки метрик
+  const metrics = [
+    { key: 'received', label: 'Поступило' },
+    { key: 'answered', label: 'Направлено ответов' },
+    { key: 'redirected', label: 'Перенаправлено' },
+    { key: 'intermediate', label: 'Дан промежуточный ответ' },
+    { key: 'rejected', label: 'Отклонено' }
+  ];
+  
+  for (const metric of metrics) {
+    html += `<tr><td class="statistics-label-cell">${metric.label}</td>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isWeekend = weekends.has(day);
+      const value = stats[metric.key][day];
+      const hasValue = value > 0;
+      
+      html += `<td class="${isWeekend ? 'weekend-cell' : 'data-cell'}${hasValue ? ' has-data' : ''}">`;
+      html += hasValue ? value : '';
+      html += '</td>';
+    }
+    html += '</tr>';
+  }
+  
+  html += '</tbody></table></div>';
+  
+  // Легенда
+  html += `
+    <div class="statistics-legend">
+      <div class="legend-item">
+        <div class="legend-color weekend"></div>
+        <span>Выходные дни</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color data"></div>
+        <span>Ячейки с данными</span>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
 }
 
 
