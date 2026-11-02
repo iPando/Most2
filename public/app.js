@@ -21,7 +21,7 @@ function getTab() { return TABS[activeTab]; }
 // ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
 // ===================================================================
 function switchTab(tabName) {
-  if (!TABS[tabName] && tabName !== 'summary') return;
+  if (!TABS[tabName] && tabName !== 'statistics') return;
   
   // Если переключились на вкладку с данными (spb или pos)
   if (tabName === 'spb' || tabName === 'pos') {
@@ -29,16 +29,17 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-' + tabName).classList.add('active');
-    document.querySelectorAll('.tab')[tabName === 'spb' ? 0 : 1].classList.add('active');
+    const tabIndex = tabName === 'spb' ? 0 : 1;
+    document.querySelectorAll('.tab')[tabIndex].classList.add('active');
     render();
-  } else if (tabName === 'summary') {
-    // Для сводной вкладки переключаем вид и обновляем данные
+  } else if (tabName === 'statistics') {
+    // Для вкладки статистики переключаем вид и обновляем данные
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-summary').classList.add('active');
+    document.getElementById('tab-statistics').classList.add('active');
     document.querySelectorAll('.tab')[2].classList.add('active');
-    initSummaryMonthSelector();
-    renderSummary();
+    initStatisticsMonthSelector();
+    renderStatistics();
   }
 }
 
@@ -938,6 +939,192 @@ async function init() {
   render();
   
   setInterval(() => renderAlertsButton(), 30 * 60 * 1000);
+}
+
+// ===================================================================
+// СТАТИСТИКА ОБРАЩЕНИЙ
+// ===================================================================
+let statisticsYear = new Date().getFullYear();
+let statisticsMonth = new Date().getMonth();
+
+function initStatisticsMonthSelector() {
+  const select = document.getElementById('statisticsMonth');
+  if (!select) return;
+  
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  
+  select.innerHTML = '';
+  const currentYear = new Date().getFullYear();
+  
+  // Последние 12 месяцев
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(currentYear, new Date().getMonth() - i);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const value = `${year}-${month}`;
+    const label = `${monthNames[month]} ${year}`;
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    if (year === statisticsYear && month === statisticsMonth) option.selected = true;
+    select.appendChild(option);
+  }
+}
+
+function changeStatisticsMonth(delta) {
+  statisticsMonth += delta;
+  if (statisticsMonth < 0) {
+    statisticsMonth = 11;
+    statisticsYear--;
+  } else if (statisticsMonth > 11) {
+    statisticsMonth = 0;
+    statisticsYear++;
+  }
+  
+  // Обновляем селектор
+  const select = document.getElementById('statisticsMonth');
+  if (select) {
+    select.value = `${statisticsYear}-${statisticsMonth}`;
+  }
+  
+  renderStatistics();
+}
+
+function parseStatisticsData() {
+  // Берем данные из вкладки СПБ
+  const complaints = TABS.spb.complaints || [];
+  
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  
+  // Инициализируем структуру для хранения статистики по дням
+  const daysInMonth = new Date(statisticsYear, statisticsMonth + 1, 0).getDate();
+  const stats = {
+    received: {},      // Поступило
+    answered: {},      // Направлено ответов
+    redirected: {},    // Перенаправлено
+    intermediate: {},  // Дан промежуточный ответ
+    rejected: {}       // Отклонено
+  };
+  
+  // Инициализируем все дни нулями
+  for (let day = 1; day <= daysInMonth; day++) {
+    stats.received[day] = 0;
+    stats.answered[day] = 0;
+    stats.redirected[day] = 0;
+    stats.intermediate[day] = 0;
+    stats.rejected[day] = 0;
+  }
+  
+  // Парсим данные обращений
+  for (const complaint of complaints) {
+    // 1. Поступило - по дате поступления
+    if (complaint.receivedDate) {
+      const date = new Date(complaint.receivedDate);
+      if (date.getFullYear() === statisticsYear && date.getMonth() === statisticsMonth) {
+        const day = date.getDate();
+        stats.received[day]++;
+      }
+    }
+    
+    // 2-5. Остальные метрики - по статусу (если есть дата изменения статуса)
+    // В текущей структуре данных нет отдельной даты изменения статуса,
+    // поэтому используем receivedDate как базовую дату
+    const status = complaint.status;
+    const baseDate = complaint.receivedDate ? new Date(complaint.receivedDate) : null;
+    
+    if (baseDate && baseDate.getFullYear() === statisticsYear && baseDate.getMonth() === statisticsMonth) {
+      const day = baseDate.getDate();
+      
+      // Проверяем точное совпадение статуса
+      if (status === 'Направлено ответов') {
+        stats.answered[day]++;
+      } else if (status === 'Перенаправлено') {
+        stats.redirected[day]++;
+      } else if (status === 'Дан промежуточный ответ') {
+        stats.intermediate[day]++;
+      } else if (status === 'Отклонена') {
+        stats.rejected[day]++;
+      }
+    }
+  }
+  
+  return { stats, daysInMonth, monthName: `${monthNames[statisticsMonth]} ${statisticsYear}` };
+}
+
+function renderStatistics() {
+  const container = document.getElementById('statisticsTableContainer');
+  if (!container) return;
+  
+  const { stats, daysInMonth, monthName } = parseStatisticsData();
+  
+  // Определяем выходные дни
+  const weekends = new Set();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(statisticsYear, statisticsMonth, day);
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      weekends.add(day);
+    }
+  }
+  
+  // Строим HTML таблицу
+  let html = '<div class="statistics-table-wrapper"><table class="statistics-table">';
+  
+  // Заголовок с названием месяца
+  html += `<thead><tr><th colspan="${daysInMonth + 1}" class="statistics-month-header">${monthName}</th></tr>`;
+  
+  // Дни месяца
+  html += '<tr><th class="statistics-label-header">Показатель</th>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const isWeekend = weekends.has(day);
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(statisticsMonth + 1).padStart(2, '0');
+    html += `<th class="statistics-date-header${isWeekend ? ' weekend' : ''}">${dayStr}.${monthStr}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+  
+  // Строки метрик
+  const metrics = [
+    { key: 'received', label: 'Поступило' },
+    { key: 'answered', label: 'Направлено ответов' },
+    { key: 'redirected', label: 'Перенаправлено' },
+    { key: 'intermediate', label: 'Дан промежуточный ответ' },
+    { key: 'rejected', label: 'Отклонено' }
+  ];
+  
+  for (const metric of metrics) {
+    html += `<tr><td class="statistics-label-cell">${metric.label}</td>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isWeekend = weekends.has(day);
+      const value = stats[metric.key][day];
+      const hasValue = value > 0;
+      
+      html += `<td class="${isWeekend ? 'weekend-cell' : 'data-cell'}${hasValue ? ' has-data' : ''}">`;
+      html += hasValue ? value : '';
+      html += '</td>';
+    }
+    html += '</tr>';
+  }
+  
+  html += '</tbody></table></div>';
+  
+  // Легенда
+  html += `
+    <div class="statistics-legend">
+      <div class="legend-item">
+        <div class="legend-color weekend"></div>
+        <span>Выходные дни</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color data"></div>
+        <span>Ячейки с данными</span>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
 }
 
 
